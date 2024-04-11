@@ -2,9 +2,14 @@ from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
+
+CORS(app)
+CORS(app, allow_headers='*')
+#CORS(app, allow_headers=['Content-Type', 'Authorization'])
 
 # Obtén la ruta completa al directorio actual
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -46,15 +51,25 @@ class SeguimientoHabitos(db.Model):
     descripcion = db.Column(db.String(200))
     fecha_registro = db.Column(db.DateTime)
 
+cod_resp = {
+                "success": 200,
+                "error": 400
+            }
+
 #Endpoints Categoria habitos
 @app.route('/api/getListaCategorias/<id_usuario>', methods=['GET'])
 def getListaCategorias(id_usuario):
-    lista_categorias = CategoriaHabitos.query\
-                        .filter(CategoriaHabitos.estado == True)\
-                        .filter(CategoriaHabitos.id_usuario == id_usuario)\
-                        .all()
-    datosJson = [{'ID_CATEGORIAHABITOS': category.id_categoriahabitos, 'DESCRIPCION': category.descripcion} for category in lista_categorias]
-    return jsonify({'lista_categorias': datosJson})
+    try:
+        lista_categorias = CategoriaHabitos.query\
+                            .filter(CategoriaHabitos.estado == True)\
+                            .filter(CategoriaHabitos.id_usuario == id_usuario)\
+                            .all()
+        datosJson = [{'ID_CATEGORIAHABITOS': category.id_categoriahabitos, 'DESCRIPCION': category.descripcion} for category in lista_categorias]
+        return jsonify({'cod_resp': cod_resp["success"],'lista_categorias': datosJson})
+    except SQLAlchemyError as e:
+        return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+    except Exception as e:
+        return jsonify({'cod_resp': cod_resp["error"], 'message': e})
 
 @app.route('/api/saveCategoria', methods=['POST'])
 def saveCategoria():
@@ -70,30 +85,39 @@ def saveCategoria():
             )
             db.session.add(category)
             db.session.commit()
-            return jsonify({'response': 'Nueva categoria guardada exitosamente'})
+            return jsonify({'cod_resp': cod_resp["success"], 'message': 'Nueva categoria guardada exitosamente'})
         except SQLAlchemyError as e:
             db.session.rollback()  # Revertir cambios en caso de error
-            return jsonify({"error": str(e)}), 500  
+            return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+        except Exception as e:
+            db.session.rollback()  # Revertir cambios en caso de error
+            return jsonify({'cod_resp': cod_resp["error"], 'message': e})  
     else:
         error = 'Content-Type not supported!'
-        return jsonify({'err': error})
+        return jsonify({'cod_resp': cod_resp["error"], 'message': error})
+    
 
 #Endpoints Habtios
 @app.route('/api/getListaHabitos/<id_usuario>', methods=['GET'])
 def getListaHabitos(id_usuario):
-    habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
-                    .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
-                    .filter(Habitos.estado == True)\
-                    .filter(CategoriaHabitos.estado == True)\
-                    .filter(CategoriaHabitos.id_usuario == id_usuario)\
-                    .all()
-    datosJson = []
-    for habito, categoria in habitosC:
-        datosJson.append({'ID_HABITO': habito.id_habito,
-                          'CATEGORIA': categoria.descripcion,
-                          'HABITO': habito.descripcion,
-                          'COLOR': habito.color})
-    return jsonify({'lista_habitos': datosJson})
+    try: 
+        habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
+                        .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
+                        .filter(Habitos.estado == True)\
+                        .filter(CategoriaHabitos.estado == True)\
+                        .filter(CategoriaHabitos.id_usuario == id_usuario)\
+                        .all()
+        datosJson = []
+        for habito, categoria in habitosC:
+            datosJson.append({'ID_HABITO': habito.id_habito,
+                            'CATEGORIA': categoria.descripcion,
+                            'HABITO': habito.descripcion,
+                            'COLOR': habito.color})
+        return jsonify({'cod_resp': cod_resp["success"], 'lista_habitos': datosJson})
+    except SQLAlchemyError as e:
+        return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+    except Exception as e:
+        return jsonify({'cod_resp': cod_resp["error"], 'message': e})
 
 @app.route('/api/saveHabito', methods=['POST'])
 def saveHabito():
@@ -111,20 +135,23 @@ def saveHabito():
             )
             db.session.add(habito_new)
             db.session.commit()
-            return jsonify({'response': 'Nuevo habito guardado exitosamente'})
+            return jsonify({'cod_resp': cod_resp["success"], 'message': 'Nuevo habito guardado exitosamente'})
         except SQLAlchemyError as e:
             db.session.rollback()  # Revertir cambios en caso de error
-            return jsonify({"error": str(e)}), 500
+            return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+        except Exception as e:
+            db.session.rollback()  # Revertir cambios en caso de error
+            return jsonify({'cod_resp': cod_resp["error"], 'message': e}) 
     else:
         error = 'Content-Type not supported!'
-        return jsonify({'err': error})
+        return jsonify({'cod_resp': cod_resp["error"], 'message': error})
 
 #Registro habitos diarios
 @app.route('/api/saveHabitoDiario', methods=['POST'])
 def saveHabitoDiario():
     content_type = request.headers.get('Content-Type')
     if (content_type == 'application/json'):
-         try:
+        try:
             segHabitos_new = SeguimientoHabitos(
                 id_habito = request.json['id_habito'],
                 estado = request.json['estado'],
@@ -133,28 +160,36 @@ def saveHabitoDiario():
             )
             db.session.add(segHabitos_new)
             db.session.commit()
-            return jsonify({'response': 'Registro guardado exitosamente'})
-         except SQLAlchemyError as e:
+            return jsonify({'cod_resp': cod_resp["success"], 'message': 'Registro guardado exitosamente'})
+        except SQLAlchemyError as e:
             db.session.rollback()  # Revertir cambios en caso de error
-            return jsonify({"error": str(e)}), 500
+            return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+        except Exception as e:
+            db.session.rollback()  # Revertir cambios en caso de error
+            return jsonify({'cod_resp': cod_resp["error"], 'message': e}) 
     else:
         error = 'Content-Type not supported!'
         return jsonify({'err': error})
 
 @app.route('/api/historicoHabitosDiarios', methods=['GET'])
 def historicoHabitosDiarios():
-    historicoHabitosDiarios_query = db.session.query(SeguimientoHabitos, Habitos).select_from(SeguimientoHabitos)\
-                    .join(Habitos, SeguimientoHabitos.id_habito == Habitos.id_habito)\
-                    .filter(SeguimientoHabitos.estado == True)\
-                    .order_by(SeguimientoHabitos.fecha_registro.desc(), Habitos.id_categoriahabitos.desc())\
-                    .all()
-    datosJson = []
-    for historicoHabitosDiarios, habito in historicoHabitosDiarios_query:
-        datosJson.append({'ID_SEGUIMIENTOHABITOS': historicoHabitosDiarios.id_seguimientohabitos,
-                          'FECHA_REGISTRO': historicoHabitosDiarios.fecha_registro,
-                          'DESCRIPCION': habito.descripcion,
-                          'COLOR': habito.color})
-    return jsonify({'lista_seguimiento': datosJson})
+    try:
+        historicoHabitosDiarios_query = db.session.query(SeguimientoHabitos, Habitos).select_from(SeguimientoHabitos)\
+                        .join(Habitos, SeguimientoHabitos.id_habito == Habitos.id_habito)\
+                        .filter(SeguimientoHabitos.estado == True)\
+                        .order_by(SeguimientoHabitos.fecha_registro.desc(), Habitos.id_categoriahabitos.desc())\
+                        .all()
+        datosJson = []
+        for historicoHabitosDiarios, habito in historicoHabitosDiarios_query:
+            datosJson.append({'ID_SEGUIMIENTOHABITOS': historicoHabitosDiarios.id_seguimientohabitos,
+                            'FECHA_REGISTRO': historicoHabitosDiarios.fecha_registro,
+                            'DESCRIPCION': habito.descripcion,
+                            'COLOR': habito.color})
+        return jsonify({'cod_resp': cod_resp["success"], 'lista_seguimiento': datosJson})
+    except SQLAlchemyError as e:
+        return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+    except Exception as e:
+        return jsonify({'cod_resp': cod_resp["error"], 'message': e})
 
 if __name__ == '__main__':
     with app.app_context():
