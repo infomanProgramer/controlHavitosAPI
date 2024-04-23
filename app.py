@@ -64,7 +64,7 @@ def getListaCategorias(id_usuario):
                             .filter(CategoriaHabitos.estado == True)\
                             .filter(CategoriaHabitos.id_usuario == id_usuario)\
                             .all()
-        datosJson = [{'ID_CATEGORIAHABITOS': category.id_categoriahabitos, 'DESCRIPCION': category.descripcion} for category in lista_categorias]
+        datosJson = [{'ID_CATEGORIAHABITOS': category.id_categoriahabitos, 'DESCRIPCION': category.descripcion, 'COLOR': category.color, 'ESBUENO': category.esbueno} for category in lista_categorias]
         return jsonify({'cod_resp': cod_resp["success"],'lista_categorias': datosJson})
     except SQLAlchemyError as e:
         return jsonify({'cod_resp': cod_resp["error"], 'message': e})
