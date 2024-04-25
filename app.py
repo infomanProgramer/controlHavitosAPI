@@ -100,20 +100,32 @@ def saveCategoria():
 #Endpoints Habtios
 @app.route('/api/getListaHabitos/<id_usuario>', methods=['GET'])
 def getListaHabitos(id_usuario):
-    try: 
+    try:
+        page = request.args.get('page', 1, type=int) 
+        per_page= request.args.get('per_page', 5, type=int)
         habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
                         .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
                         .filter(Habitos.estado == True)\
                         .filter(CategoriaHabitos.estado == True)\
                         .filter(CategoriaHabitos.id_usuario == id_usuario)\
-                        .all()
+                        .paginate(page=page, per_page=per_page)
         datosJson = []
-        for habito, categoria in habitosC:
+        for habito, categoria in habitosC.items:
             datosJson.append({'ID_HABITO': habito.id_habito,
                             'CATEGORIA': categoria.descripcion,
                             'HABITO': habito.descripcion,
                             'COLOR': habito.color})
-        return jsonify({'cod_resp': cod_resp["success"], 'lista_habitos': datosJson})
+        meta = {
+            "page": habitosC.page,
+            "pages": habitosC.pages,
+            "total_count": habitosC.total,
+            "prev": habitosC.prev_num,
+            "prev_page": habitosC.prev_num,
+            "next_page": habitosC.next_num,
+            "has_next": habitosC.has_next,
+            "has_prev": habitosC.has_prev
+        }
+        return jsonify({'cod_resp': cod_resp["success"], 'lista_habitos': datosJson, 'meta': meta})
     except SQLAlchemyError as e:
         return jsonify({'cod_resp': cod_resp["error"], 'message': e})
     except Exception as e:
