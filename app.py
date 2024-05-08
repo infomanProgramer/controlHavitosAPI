@@ -131,6 +131,57 @@ def getListaHabitos(id_usuario):
     except Exception as e:
         return jsonify({'cod_resp': cod_resp["error"], 'message': e})
 
+@app.route('/api/getListaHabitosFiltro/<id_usuario>/<categoria_id>/<descripcion>', methods=['GET'])
+def getListaHabitosFiltro(id_usuario, categoria_id, descripcion):
+    try:
+        print("categoria_id", categoria_id)
+
+        page = request.args.get('page', 1, type=int) 
+        per_page= request.args.get('per_page', 5, type=int)
+        if int(categoria_id) == -1: #Muestra todas las categorias
+            print("Ingresa por true")
+            habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
+                            .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
+                            .filter(Habitos.estado == True)\
+                            .filter(CategoriaHabitos.estado == True)\
+                            .filter(CategoriaHabitos.id_usuario == id_usuario)\
+                            .filter(Habitos.descripcion.like("%"+descripcion+"%"))\
+                            .paginate(page=page, per_page=per_page)
+        else:
+             print("Ingresa por false")
+             habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
+                            .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
+                            .filter(Habitos.estado == True)\
+                            .filter(CategoriaHabitos.estado == True)\
+                            .filter(Habitos.id_categoriahabitos == categoria_id)\
+                            .filter(CategoriaHabitos.id_usuario == id_usuario)\
+                            .filter(Habitos.descripcion.like("%"+descripcion+"%"))\
+                            .paginate(page=page, per_page=per_page)
+                            
+
+                        
+        datosJson = []
+        for habito, categoria in habitosC.items:
+            datosJson.append({'ID_HABITO': habito.id_habito,
+                            'CATEGORIA': categoria.descripcion,
+                            'HABITO': habito.descripcion,
+                            'COLOR': habito.color})
+        meta = {
+            "page": habitosC.page,
+            "pages": habitosC.pages,
+            "total_count": habitosC.total,
+            "prev": habitosC.prev_num,
+            "prev_page": habitosC.prev_num,
+            "next_page": habitosC.next_num,
+            "has_next": habitosC.has_next,
+            "has_prev": habitosC.has_prev
+        }
+        return jsonify({'cod_resp': cod_resp["success"], 'lista_habitos': datosJson, 'meta': meta})
+    except SQLAlchemyError as e:
+        return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+    except Exception as e:
+        return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+
 @app.route('/api/saveHabito', methods=['POST'])
 def saveHabito():
     content_type = request.headers.get('Content-Type')
