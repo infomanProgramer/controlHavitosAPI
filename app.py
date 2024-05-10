@@ -98,17 +98,29 @@ def saveCategoria():
     
 
 #Endpoints Habtios
-@app.route('/api/getListaHabitos/<id_usuario>', methods=['GET'])
-def getListaHabitos(id_usuario):
+@app.route('/api/getListaHabitos/<id_usuario>/<id_categoria>', methods=['GET'])
+def getListaHabitos(id_usuario, id_categoria):
     try:
         page = request.args.get('page', 1, type=int) 
         per_page= request.args.get('per_page', 5, type=int)
-        habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
-                        .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
-                        .filter(Habitos.estado == True)\
-                        .filter(CategoriaHabitos.estado == True)\
-                        .filter(CategoriaHabitos.id_usuario == id_usuario)\
-                        .paginate(page=page, per_page=per_page)
+        if id_categoria == "-1":
+            print("Muestra todoso")
+            habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
+                            .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
+                            .filter(Habitos.estado == True)\
+                            .filter(CategoriaHabitos.estado == True)\
+                            .filter(CategoriaHabitos.id_usuario == id_usuario)\
+                            .paginate(page=page, per_page=per_page)
+        else:
+            print("Muestra por categorias")
+            habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
+                            .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
+                            .filter(Habitos.estado == True)\
+                            .filter(CategoriaHabitos.estado == True)\
+                            .filter(CategoriaHabitos.id_usuario == id_usuario)\
+                            .filter(CategoriaHabitos.id_categoriahabitos == id_categoria)\
+                            .paginate(page=page, per_page=per_page)
+             
         datosJson = []
         for habito, categoria in habitosC.items:
             datosJson.append({'ID_HABITO': habito.id_habito,
