@@ -96,6 +96,28 @@ def saveCategoria():
         error = 'Content-Type not supported!'
         return jsonify({'cod_resp': cod_resp["error"], 'message': error})
     
+@app.route('/api/saveHistorialSeguimiento', methods=['POST'])
+def saveHistorialSeguimiento():
+    content_type = request.headers.get('Content-Type')
+    if (content_type == 'application/json'):
+        for item in request.json['lista_habitos']:
+            try:
+                seguimiento = SeguimientoHabitos(
+                    id_habito = item['ID_HABITO'],
+                    estado = True,
+                    color = item['COLOR'],
+                    fecha_registro = datetime.now()
+                )
+                db.session.add(seguimiento)
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()  # Revertir cambios en caso de error
+                return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+            except Exception as e:
+                return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+        return jsonify({'cod_resp': cod_resp["success"], 'message': 'Registro de habitos cargados exitosamente'})
+
+    
 
 #Endpoints Habtios
 @app.route('/api/getListaHabitos/<id_usuario>/<id_categoria>', methods=['GET'])
@@ -157,7 +179,7 @@ def getListaHabitosFiltro(id_usuario, categoria_id, descripcion):
                             .filter(Habitos.estado == True)\
                             .filter(CategoriaHabitos.estado == True)\
                             .filter(CategoriaHabitos.id_usuario == id_usuario)\
-                            .filter(Habitos.descripcion.like("%"+descripcion+"%"))\
+                            .filter(Habitos.descripcion.like("%"+descripcion.strip()+"%"))\
                             .paginate(page=page, per_page=per_page)
         else:
              print("Ingresa por false")
@@ -167,7 +189,7 @@ def getListaHabitosFiltro(id_usuario, categoria_id, descripcion):
                             .filter(CategoriaHabitos.estado == True)\
                             .filter(Habitos.id_categoriahabitos == categoria_id)\
                             .filter(CategoriaHabitos.id_usuario == id_usuario)\
-                            .filter(Habitos.descripcion.like("%"+descripcion+"%"))\
+                            .filter(Habitos.descripcion.like("%"+descripcion.strip()+"%"))\
                             .paginate(page=page, per_page=per_page)
                             
 
