@@ -4,6 +4,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 from flask_cors import CORS
 import os
+import json
+#from datetime import datetime
 
 app = Flask(__name__)
 
@@ -168,12 +170,9 @@ def getListaHabitos(id_usuario, id_categoria):
 @app.route('/api/getListaHabitosFiltro/<id_usuario>/<categoria_id>/<descripcion>', methods=['GET'])
 def getListaHabitosFiltro(id_usuario, categoria_id, descripcion):
     try:
-        print("categoria_id", categoria_id)
-
         page = request.args.get('page', 1, type=int) 
         per_page= request.args.get('per_page', 5, type=int)
         if int(categoria_id) == -1: #Muestra todas las categorias
-            print("Ingresa por true")
             habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
                             .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
                             .filter(Habitos.estado == True)\
@@ -182,7 +181,6 @@ def getListaHabitosFiltro(id_usuario, categoria_id, descripcion):
                             .filter(Habitos.descripcion.like("%"+descripcion.strip()+"%"))\
                             .paginate(page=page, per_page=per_page)
         else:
-             print("Ingresa por false")
              habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
                             .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
                             .filter(Habitos.estado == True)\
@@ -271,18 +269,45 @@ def saveHabitoDiario():
 @app.route('/api/historicoHabitosDiarios', methods=['GET'])
 def historicoHabitosDiarios():
     try:
+        page = request.args.get('page', 1, type=int) 
+        per_page= request.args.get('per_page', 5, type=int)
+
+        print('page', page)
+        print('per_page', per_page)
+
         historicoHabitosDiarios_query = db.session.query(SeguimientoHabitos, Habitos).select_from(SeguimientoHabitos)\
                         .join(Habitos, SeguimientoHabitos.id_habito == Habitos.id_habito)\
                         .filter(SeguimientoHabitos.estado == True)\
                         .order_by(SeguimientoHabitos.fecha_registro.desc(), Habitos.id_categoriahabitos.desc())\
                         .all()
+                        
         datosJson = []
+        fecha_pivot = historicoHabitosDiarios_query[0][0].fecha_registro
+        habitos = []
+        newHabitosObj = {}
+        cont = 0
+        page_pivot = 1
         for historicoHabitosDiarios, habito in historicoHabitosDiarios_query:
-            datosJson.append({'ID_SEGUIMIENTOHABITOS': historicoHabitosDiarios.id_seguimientohabitos,
-                            'FECHA_REGISTRO': historicoHabitosDiarios.fecha_registro,
-                            'DESCRIPCION': habito.descripcion,
-                            'COLOR': habito.color})
-        return jsonify({'cod_resp': cod_resp["success"], 'lista_seguimiento': datosJson})
+            if fecha_pivot.date() != historicoHabitosDiarios.fecha_registro.date():
+                newHabitosObj = {
+                    'FECHA_REGISTROS': fecha_pivot,
+                    'HABITOS_ARRAY': json.dumps(habitos)
+                }
+                if cont < per_page:
+                    if page == page_pivot:
+                        datosJson.append(newHabitosObj)
+                    cont = cont + 1
+                else:
+                    cont = 0
+                    page_pivot = page_pivot + 1
+                    
+                fecha_pivot = historicoHabitosDiarios.fecha_registro
+                newHabitosObj = {}
+                habitos = []
+            if fecha_pivot.date() == historicoHabitosDiarios.fecha_registro.date():
+                habitos.append({"DESCRIPCION": habito.descripcion})
+        
+        return jsonify({'cod_resp': cod_resp["success"], 'lista_seguimiento': datosJson, 'meta': 'meta'})
     except SQLAlchemyError as e:
         return jsonify({'cod_resp': cod_resp["error"], 'message': e})
     except Exception as e:
