@@ -282,13 +282,16 @@ def historicoHabitosDiarios():
                         .all()
                         
         datosJson = []
-        fecha_pivot = historicoHabitosDiarios_query[0][0].fecha_registro
+        #fecha_pivot = historicoHabitosDiarios_query[(page-1)*per_page][0].fecha_registro
+        fecha_pivot = ""
         habitos = []
         newHabitosObj = {}
         cont = 0
         page_pivot = 1
-        for historicoHabitosDiarios, habito in historicoHabitosDiarios_query:
-            if fecha_pivot.date() != historicoHabitosDiarios.fecha_registro.date():
+        index = 0
+        print('fecha_pivot => ', fecha_pivot)
+        while index < len(historicoHabitosDiarios_query):
+            if fecha_pivot.date() != historicoHabitosDiarios_query[index][0].fecha_registro.date():
                 newHabitosObj = {
                     'FECHA_REGISTROS': fecha_pivot,
                     'HABITOS_ARRAY': json.dumps(habitos)
@@ -301,11 +304,12 @@ def historicoHabitosDiarios():
                     cont = 0
                     page_pivot = page_pivot + 1
                     
-                fecha_pivot = historicoHabitosDiarios.fecha_registro
+                fecha_pivot = historicoHabitosDiarios_query[index][0].fecha_registro
                 newHabitosObj = {}
                 habitos = []
-            if fecha_pivot.date() == historicoHabitosDiarios.fecha_registro.date():
-                habitos.append({"DESCRIPCION": habito.descripcion})
+            elif fecha_pivot.date() == historicoHabitosDiarios_query[index][0].fecha_registro.date():
+                habitos.append({"DESCRIPCION": historicoHabitosDiarios_query[index][1].descripcion})
+                index = index + 1
         
         return jsonify({'cod_resp': cod_resp["success"], 'lista_seguimiento': datosJson, 'meta': 'meta'})
     except SQLAlchemyError as e:
