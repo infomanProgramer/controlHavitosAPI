@@ -283,7 +283,7 @@ def historicoHabitosDiarios():
                         
         datosJson = []
         #fecha_pivot = historicoHabitosDiarios_query[(page-1)*per_page][0].fecha_registro
-        fecha_pivot = ""
+        fecha_pivot = historicoHabitosDiarios_query[0][0].fecha_registro
         habitos = []
         newHabitosObj = {}
         cont = 0
@@ -293,20 +293,20 @@ def historicoHabitosDiarios():
         while index < len(historicoHabitosDiarios_query):
             if fecha_pivot.date() != historicoHabitosDiarios_query[index][0].fecha_registro.date():
                 newHabitosObj = {
-                    'FECHA_REGISTROS': fecha_pivot,
+                    'FECHA_REGISTRO': fecha_pivot,
                     'HABITOS_ARRAY': json.dumps(habitos)
                 }
                 if cont < per_page:
                     if page == page_pivot:
                         datosJson.append(newHabitosObj)
                     cont = cont + 1
+                    fecha_pivot = historicoHabitosDiarios_query[index][0].fecha_registro
+                    newHabitosObj = {}
+                    habitos = []
                 else:
                     cont = 0
                     page_pivot = page_pivot + 1
                     
-                fecha_pivot = historicoHabitosDiarios_query[index][0].fecha_registro
-                newHabitosObj = {}
-                habitos = []
             elif fecha_pivot.date() == historicoHabitosDiarios_query[index][0].fecha_registro.date():
                 habitos.append({"DESCRIPCION": historicoHabitosDiarios_query[index][1].descripcion})
                 index = index + 1
