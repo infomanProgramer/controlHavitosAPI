@@ -128,7 +128,6 @@ def getListaHabitos(id_usuario, id_categoria):
         page = request.args.get('page', 1, type=int) 
         per_page= request.args.get('per_page', 5, type=int)
         if id_categoria == "-1":
-            print("Muestra todoso")
             habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
                             .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
                             .filter(Habitos.estado == True)\
@@ -136,7 +135,6 @@ def getListaHabitos(id_usuario, id_categoria):
                             .filter(CategoriaHabitos.id_usuario == id_usuario)\
                             .paginate(page=page, per_page=per_page)
         else:
-            print("Muestra por categorias")
             habitosC = db.session.query(Habitos, CategoriaHabitos).select_from(Habitos)\
                             .join(CategoriaHabitos, Habitos.id_categoriahabitos == CategoriaHabitos.id_categoriahabitos)\
                             .filter(Habitos.estado == True)\
@@ -272,9 +270,6 @@ def historicoHabitosDiarios():
         page = request.args.get('page', 1, type=int) 
         per_page= request.args.get('per_page', 5, type=int)
 
-        print('page', page)
-        print('per_page', per_page)
-
         historicoHabitosDiarios_query = db.session.query(SeguimientoHabitos, Habitos).select_from(SeguimientoHabitos)\
                         .join(Habitos, SeguimientoHabitos.id_habito == Habitos.id_habito)\
                         .filter(SeguimientoHabitos.estado == True)\
@@ -289,7 +284,6 @@ def historicoHabitosDiarios():
         cont = 0
         page_pivot = 1
         index = 0
-        print('fecha_pivot => ', fecha_pivot)
         while index < len(historicoHabitosDiarios_query):
             if fecha_pivot.date() != historicoHabitosDiarios_query[index][0].fecha_registro.date():
                 newHabitosObj = {
@@ -308,7 +302,12 @@ def historicoHabitosDiarios():
                     page_pivot = page_pivot + 1
                     
             elif fecha_pivot.date() == historicoHabitosDiarios_query[index][0].fecha_registro.date():
-                habitos.append({"DESCRIPCION": historicoHabitosDiarios_query[index][1].descripcion})
+                habitos.append({
+                    "ID_SEGUIMIENTO": historicoHabitosDiarios_query[index][0].id_seguimientohabitos,
+                    "ID_HABITO": historicoHabitosDiarios_query[index][1].id_habito,
+                    "DESCRIPCION": historicoHabitosDiarios_query[index][1].descripcion,
+                    "COLOR": historicoHabitosDiarios_query[index][1].color
+                    })
                 index = index + 1
         
         return jsonify({'cod_resp': cod_resp["success"], 'lista_seguimiento': datosJson, 'meta': 'meta'})
