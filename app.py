@@ -277,7 +277,6 @@ def historicoHabitosDiarios():
                         .all()
                         
         datosJson = []
-        #fecha_pivot = historicoHabitosDiarios_query[(page-1)*per_page][0].fecha_registro
         fecha_pivot = historicoHabitosDiarios_query[0][0].fecha_registro
         habitos = []
         newHabitosObj = {}
@@ -285,11 +284,12 @@ def historicoHabitosDiarios():
         page_pivot = 1
         index = 0
         while index < len(historicoHabitosDiarios_query):
-            if fecha_pivot.date() != historicoHabitosDiarios_query[index][0].fecha_registro.date():
+            if fecha_pivot.date() != historicoHabitosDiarios_query[index][0].fecha_registro.date() or index == (len(historicoHabitosDiarios_query)-1):
                 newHabitosObj = {
                     'FECHA_REGISTRO': fecha_pivot,
                     'HABITOS_ARRAY': json.dumps(habitos)
                 }
+                print('newHabitosObj: ', newHabitosObj['FECHA_REGISTRO'])
                 if cont < per_page:
                     if page == page_pivot:
                         datosJson.append(newHabitosObj)
@@ -300,6 +300,9 @@ def historicoHabitosDiarios():
                 else:
                     cont = 0
                     page_pivot = page_pivot + 1
+
+                if index == (len(historicoHabitosDiarios_query)-1):
+                    index  = index + 1
                     
             elif fecha_pivot.date() == historicoHabitosDiarios_query[index][0].fecha_registro.date():
                 habitos.append({
@@ -309,8 +312,15 @@ def historicoHabitosDiarios():
                     "COLOR": historicoHabitosDiarios_query[index][1].color
                     })
                 index = index + 1
+                print('fecha_pivot.date() = > ', fecha_pivot.date())
+                print('index = > ', index)
+                print('len(historicoHabitosDiarios_query) => ', len(historicoHabitosDiarios_query))
+
+        meta = {
+            "page": page_pivot,
+            "pages": page_pivot}
         
-        return jsonify({'cod_resp': cod_resp["success"], 'lista_seguimiento': datosJson, 'meta': 'meta'})
+        return jsonify({'cod_resp': cod_resp["success"], 'lista_seguimiento': datosJson, 'meta': meta})
     except SQLAlchemyError as e:
         return jsonify({'cod_resp': cod_resp["error"], 'message': e})
     except Exception as e:
