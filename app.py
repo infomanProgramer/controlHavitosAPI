@@ -289,7 +289,6 @@ def historicoHabitosDiarios():
                     'FECHA_REGISTRO': fecha_pivot,
                     'HABITOS_ARRAY': json.dumps(habitos)
                 }
-                print('newHabitosObj: ', newHabitosObj['FECHA_REGISTRO'])
                 if cont < per_page:
                     if page == page_pivot:
                         datosJson.append(newHabitosObj)
@@ -312,9 +311,6 @@ def historicoHabitosDiarios():
                     "COLOR": historicoHabitosDiarios_query[index][1].color
                     })
                 index = index + 1
-                print('fecha_pivot.date() = > ', fecha_pivot.date())
-                print('index = > ', index)
-                print('len(historicoHabitosDiarios_query) => ', len(historicoHabitosDiarios_query))
 
         meta = {
             "page": page_pivot,
