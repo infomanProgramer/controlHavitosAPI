@@ -5,6 +5,8 @@ from datetime import datetime
 from flask_cors import CORS
 import os
 import json
+import calendar
+from sqlalchemy import extract
 #from datetime import datetime
 
 app = Flask(__name__)
@@ -317,6 +319,107 @@ def historicoHabitosDiarios():
             "pages": page_pivot}
         
         return jsonify({'cod_resp': cod_resp["success"], 'lista_seguimiento': datosJson, 'meta': meta})
+    except SQLAlchemyError as e:
+        return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+    except Exception as e:
+        return jsonify({'cod_resp': cod_resp["error"], 'message': e})
+    
+#Variables
+
+months = [
+            {'key': 1, 'value': 'Enero'}, 
+            {'key': 2, 'value': 'Febrero'}, 
+            {'key': 3, 'value': 'Marzo'}, 
+            {'key': 4, 'value': 'Abril'},
+            {'key': 5, 'value': 'Mayo'},
+            {'key': 6, 'value': 'Junio'}, 
+            {'key': 7, 'value': 'Julio'}, 
+            {'key': 8, 'value': 'Agosto'},
+            {'key': 9, 'value': 'Septiembre'},
+            {'key': 10, 'value': 'Octubre'},
+            {'key': 11, 'value': 'Noviembre'},
+            {'key': 12, 'value': 'Diciembre'}
+        ]
+    
+@app.route('/api/calendarV1', methods=['GET'])
+def getCalendarV1():
+    calendarArray = []
+    year = request.args.get('year', 2024, type=int) 
+    habit = request.args.get('habit', 2024, type=int) 
+    #print('year: ', year)
+    mesesPar = []
+    mesObj1 = {}
+    mesObj2 = {}
+    try:
+        habito = Habitos.query\
+                            .filter(Habitos.id_habito == habit)\
+                            .first()
+        print(habito.descripcion)
+        historicoHabitosDiarios_query = db.session.query(SeguimientoHabitos).select_from(SeguimientoHabitos)\
+                        .filter(extract('year', SeguimientoHabitos.fecha_registro) == year)\
+                        .filter(SeguimientoHabitos.id_habito == habit)\
+                        .order_by(SeguimientoHabitos.fecha_registro.asc())\
+                        .all()
+
+        for month in months:
+            daysOfWeekBody = []
+            index = 1
+            keyDay = 0
+
+            for i in range(0, calendar.monthrange(year, month["key"])[0]):
+                daysOfWeekBody.append({"key": index, "keyDay": keyDay, "value": "0", "realizado": False})
+                index = index + 1
+                if keyDay < 6:
+                    keyDay = keyDay + 1
+                else:
+                    keyDay = 0
+            auxKeyDay = 0
+            for i in range(1, calendar.monthrange(year, month["key"])[1]+1):
+                auxKeyDay = keyDay
+                # fecha = str(i)+"/"+str(month["key"])+"/"+str(year)
+                fecha = datetime(year, month["key"], i).date()
+                sw = False
+                for item in historicoHabitosDiarios_query:
+                    if fecha == item.fecha_registro.date():
+                        sw = True
+                        break
+                
+                #print(fecha, str(sw))
+
+                daysOfWeekBody.append({"key": index, "keyDay": keyDay, "value": i, "realizado": sw})
+                index = index + 1
+                if keyDay < 6:
+                    keyDay = keyDay + 1
+                else:
+                    keyDay = 0
+            
+            for i in range(auxKeyDay, 6):
+                daysOfWeekBody.append({"key": index, "keyDay": keyDay, "value": "0", "realizado": False})
+                index = index + 1
+                if keyDay < 6:
+                    keyDay = keyDay + 1
+                else:
+                    keyDay = 0
+
+            if month["key"] % 2 != 0:
+                mesObj1 = {
+                    "month": month["value"],
+                    "daysOfWeekBody": daysOfWeekBody
+                }
+            else:
+                mesObj2 = {
+                    "month": month["value"],
+                    "daysOfWeekBody": daysOfWeekBody
+                }
+                mesesPar.append(mesObj1)
+                mesesPar.append(mesObj2)
+                calendarArray.append(mesesPar)
+                mesesPar = []
+                mesObj1 = {}
+                mesObj2 = {}
+            
+        return jsonify({'cod_resp': cod_resp["success"], "year": year, 'descripcion_habito': habito.descripcion, 'calendarArray': calendarArray})
+
     except SQLAlchemyError as e:
         return jsonify({'cod_resp': cod_resp["error"], 'message': e})
     except Exception as e:
